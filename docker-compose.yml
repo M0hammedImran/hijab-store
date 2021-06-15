@@ -1,0 +1,46 @@
+version: '3.7'
+
+services:
+    reverse-proxy:
+        container_name: 'protoezy-reverse-proxy'
+        image: 'traefik:v2.4'
+        command:
+            - --api.insecure=true
+            - --providers.docker
+        ports:
+            - '80:80'
+            - '8080:8080'
+        volumes:
+            # So that Traefik can listen to the Docker events
+            - /var/run/docker.sock:/var/run/docker.sock
+
+    client:
+        container_name: 'hijab_store_client'
+        image: 'node:14'
+        command: 'yarn dev'
+        working_dir: '/srv/client'
+        volumes:
+            - ./client:/srv/client:rw
+        depends_on:
+            - backend
+        ports:
+            - '127.0.0.1:3000:3000'
+        labels:
+            - 'traefik.http.routers.client.rule=Host(`store.localhost`)'
+        env_file:
+            - .env
+
+    backend:
+        container_name: 'hijab_store_backend'
+        image: 'node:14'
+        command: 'yarn develop'
+        working_dir: '/srv/backend'
+        volumes:
+            - ./backend:/srv/backend:rw
+        ports:
+            - '127.0.0.1:1337:1337'
+        labels:
+            - 'traefik.http.routers.backend.rule=Host(`store.localhost`) && PathPrefix(`/api`)'
+            # - 'traefik.http.services.backend.loadbalancer.server.port=1337'
+        env_file:
+            - .env
