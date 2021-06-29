@@ -1,8 +1,8 @@
 version: '3.7'
 
 services:
-    reverse-proxy:
-        container_name: 'protoezy-reverse-proxy'
+    reverse_proxy:
+        container_name: 'hijab_store_reverse_proxy'
         image: 'traefik:v2.4'
         command:
             - --api.insecure=true
@@ -23,10 +23,12 @@ services:
             - ./client:/srv/client:rw
         depends_on:
             - backend
+            - postgres
         ports:
             - '127.0.0.1:3000:3000'
         labels:
             - 'traefik.http.routers.client.rule=Host(`store.localhost`)'
+            - 'traefik.http.services.client.loadbalancer.server.port=3000'
         env_file:
             - .env
 
@@ -40,7 +42,23 @@ services:
         ports:
             - '127.0.0.1:1337:1337'
         labels:
-            - 'traefik.http.routers.backend.rule=Host(`store.localhost`) && PathPrefix(`/api`)'
-            # - 'traefik.http.services.backend.loadbalancer.server.port=1337'
+            - 'traefik.http.routers.backend.rule=Host(`api.localhost`)'
+            - 'traefik.http.services.backend.loadbalancer.server.port=1337'
         env_file:
             - .env
+        depends_on:
+            - postgres
+
+    postgres:
+        container_name: 'hijab_store_database'
+        image: 'postgres:13.3-alpine'
+        volumes:
+            - 'pgdata:/var/lib/postgresql/data/'
+        environment:
+            POSTGRES_PASSWORD: 'store'
+            POSTGRES_USER: 'imran'
+            POSTGRES_DB: 'hijab_store'
+
+volumes:
+    pgdata:
+        driver: local
